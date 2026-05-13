@@ -235,6 +235,11 @@ In deny scope, `service.sh` waits for package UID resolution before loading.
 It also waits for configured paths so late-created `/dev` entries have a chance
 to exist before `nohello.ko` resolves target inodes.
 
+Paths that do not exist when `nohello.ko` loads are skipped. For dynamic paths
+such as `/data/incremental/...`, open the WebUI and use `Save & Reload` after
+the path exists, or reload manually. The WebUI uses short waits during manual
+reloads to keep the page responsive.
+
 Install `out/nohello-ksu.zip` in KernelSU Manager, reboot, then check:
 
 ```sh

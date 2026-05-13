@@ -10,12 +10,20 @@ const files = {
 
 let apps = [];
 let selectedPackages = new Set();
+let busy = false;
 
 const $ = (selector) => document.querySelector(selector);
 const pathList = $("#pathList");
 const appList = $("#appList");
 const statusText = $("#statusText");
 const toast = $("#toast");
+const actionButtons = [
+	$("#refreshBtn"),
+	$("#loadAppsBtn"),
+	$("#saveBtn"),
+	$("#reloadBtn"),
+	$("#addPathBtn"),
+];
 
 function shellQuote(value) {
 	return `'${String(value).replace(/'/g, "'\\''")}'`;
@@ -71,7 +79,32 @@ function showToast(message) {
 	clearTimeout(showToast.timer);
 	showToast.timer = setTimeout(() => {
 		toast.hidden = true;
-	}, 2600);
+	}, 4200);
+}
+
+function setBusy(nextBusy, message) {
+	busy = nextBusy;
+	for (const button of actionButtons) {
+		if (button) button.disabled = nextBusy;
+	}
+	if (message) statusText.textContent = message;
+}
+
+async function runAction(message, action) {
+	if (busy) {
+		showToast("Busy, please wait");
+		return;
+	}
+
+	setBusy(true, message);
+	try {
+		await action();
+	} catch (error) {
+		showToast(error.message);
+		throw error;
+	} finally {
+		setBusy(false);
+	}
 }
 
 async function readFile(path) {
@@ -155,6 +188,7 @@ function renderApps() {
 }
 
 async function loadApps() {
+	statusText.textContent = "Loading apps...";
 	const showSystem = $("#showSystemInput").checked;
 	const command = showSystem ? "pm list packages -U" : "pm list packages -U -3";
 	const output = await execShell(command);
@@ -167,6 +201,7 @@ async function loadApps() {
 }
 
 async function refreshConfig() {
+	statusText.textContent = "Refreshing...";
 	const targetText = await readFile(files.targets);
 	const hideText = await readFile(files.hideDirents);
 	const scopeText = await readFile(files.scope);
@@ -185,12 +220,14 @@ async function refreshConfig() {
 }
 
 async function saveConfig() {
+	statusText.textContent = "Saving...";
 	const scope = document.querySelector('input[name="scope"]:checked')?.value || "global";
 	await writeLines(files.targets, collectPaths());
 	await writeLines(files.hideDirents, [$("#hideDirentsInput").checked ? "1" : "0"]);
 	await writeLines(files.scope, [scope]);
 	await writeLines(files.denyPackages, [...selectedPackages].sort());
 	await writeLines(files.denyUids, linesFromText($("#denyUidsInput").value));
+	statusText.textContent = "Saved";
 	showToast("Saved");
 }
 
@@ -198,7 +235,7 @@ async function reloadModule() {
 	await saveConfig();
 	statusText.textContent = "Reloading...";
 	await execShell(
-		`if grep -q '^nohello ' /proc/modules 2>/dev/null; then rmmod nohello; fi; sh ${shellQuote(files.service)}; dmesg | grep nohello | tail -n 20`
+		`if grep -q '^nohello ' /proc/modules 2>/dev/null; then rmmod nohello; fi; NOHELLO_TARGET_WAIT_SECONDS=5 NOHELLO_PACKAGE_WAIT_SECONDS=5 sh ${shellQuote(files.service)}; dmesg | grep nohello | tail -n 20`
 	);
 	await refreshConfig();
 	showToast("Module reloaded");
@@ -219,13 +256,13 @@ $("#addPathBtn").addEventListener("click", () => {
 	input.focus();
 });
 
-$("#loadAppsBtn").addEventListener("click", () => loadApps().catch((error) => showToast(error.message)));
-$("#refreshBtn").addEventListener("click", () => refreshConfig().catch((error) => showToast(error.message)));
+$("#loadAppsBtn").addEventListener("click", () => runAction("Loading apps...", loadApps).catch(() => {}));
+$("#refreshBtn").addEventListener("click", () => runAction("Refreshing...", refreshConfig).catch(() => {}));
 $("#searchInput").addEventListener("input", renderApps);
-$("#saveBtn").addEventListener("click", () => saveConfig().catch((error) => showToast(error.message)));
-$("#reloadBtn").addEventListener("click", () => reloadModule().catch((error) => {
+$("#saveBtn").addEventListener("click", () => runAction("Saving...", saveConfig).catch(() => {}));
+$("#reloadBtn").addEventListener("click", () => runAction("Reloading...", reloadModule).catch((error) => {
 	statusText.textContent = "Reload failed";
-	showToast(error.message);
+	showToast(error.message || "Reload failed");
 }));
 
 for (const radio of document.querySelectorAll('input[name="scope"]')) {
@@ -236,7 +273,7 @@ for (const radio of document.querySelectorAll('input[name="scope"]')) {
 	});
 }
 
-refreshConfig().catch((error) => {
+runAction("Reading config...", refreshConfig).catch((error) => {
 	statusText.textContent = "Read failed";
 	showToast(error.message);
 });

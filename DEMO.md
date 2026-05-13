@@ -152,6 +152,10 @@ For late-created `/dev` paths, increase the wait time while packaging:
 .\tools\package_ksu.ps1 -KoPath .\kernel\nohello.ko -Output .\out\nohello-ksu.zip -TargetPath "/dev/example,/system_ext/app/SoterService" -ScopeMode deny -DenyPackage "com.example.detector" -TargetWaitSeconds 90 -PackageWaitSeconds 90
 ```
 
+For very dynamic paths such as `/data/incremental/...`, the path must exist at
+reload time. If boot-time loading skips it, create or trigger the path first,
+then use WebUI `Save & Reload`.
+
 Install `out/nohello-ksu.zip` from KernelSU Manager and reboot. The bundled
 `service.sh` loads `nohello.ko` only when the target file already exists, which
 keeps the demo easier to recover from.
