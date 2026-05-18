@@ -56,8 +56,38 @@ jobs:
         llvm-strip -d "/github/workspace/out/$OUTPUT_NAME"
         echo "Size after stripping: $(du -h "/github/workspace/out/$OUTPUT_NAME" | cut -f1)"
 
+    - name: Package KernelSU module zip
+      run: |
+        KO_PATH="/github/workspace/out/${{ inputs.kmi }}_noopt.ko"
+        STAGE_DIR="/github/workspace/out/ksu-stage"
+        ZIP_PATH="/github/workspace/out/${{ inputs.kmi }}_noopt-ksu.zip"
+
+        rm -rf "$STAGE_DIR"
+        mkdir -p "$STAGE_DIR"
+
+        # Copy KernelSU module template
+        cp -R ksu-module/. "$STAGE_DIR"/
+        cp "$KO_PATH" "$STAGE_DIR/noopt.ko"
+
+        # Ensure scripts are executable
+        chmod 0755 "$STAGE_DIR/service.sh" "$STAGE_DIR/uninstall.sh"
+
+        # Normalize line endings to LF
+        find "$STAGE_DIR" -type f \( -name "*.conf" -o -name "*.css" -o -name "*.html" -o -name "*.js" -o -name "*.md" -o -name "*.prop" -o -name "*.sh" \) -exec sed -i 's/\r$//' {} +
+
+        # Create zip
+        cd "$STAGE_DIR"
+        zip -q -r "$ZIP_PATH" .
+        echo "Created KernelSU package: $ZIP_PATH ($(du -h "$ZIP_PATH" | cut -f1))"
+
     - name: Upload noopt.ko artifact
       uses: actions/upload-artifact@v7
       with:
         name: ${{ inputs.kmi }}-lkm
         path: /github/workspace/out/${{ inputs.kmi }}_noopt.ko
+
+    - name: Upload KernelSU module zip
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ inputs.kmi }}-ksu-module
+        path: /github/workspace/out/${{ inputs.kmi }}_noopt-ksu.zip
