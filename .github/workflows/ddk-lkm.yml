@@ -65,29 +65,25 @@ jobs:
         rm -rf "$STAGE_DIR"
         mkdir -p "$STAGE_DIR"
 
-        # Copy KernelSU module template
         cp -R ksu-module/. "$STAGE_DIR"/
         cp "$KO_PATH" "$STAGE_DIR/noopt.ko"
 
-        # Ensure scripts are executable
         chmod 0755 "$STAGE_DIR/service.sh" "$STAGE_DIR/uninstall.sh"
 
-        # Normalize line endings to LF
         find "$STAGE_DIR" -type f \( -name "*.conf" -o -name "*.css" -o -name "*.html" -o -name "*.js" -o -name "*.md" -o -name "*.prop" -o -name "*.sh" \) -exec sed -i 's/\r$//' {} +
 
-        # Create zip using Python (zip may not be available in DDK container)
-        python3 -c "
-import zipfile, os, sys
-stage = sys.argv[1]
-out = sys.argv[2]
-with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as zf:
-    for root, dirs, files in os.walk(stage):
-        for f in files:
-            full = os.path.join(root, f)
-            arcname = os.path.relpath(full, stage)
-            zf.write(full, arcname)
-print(f'Created: {out} ({os.path.getsize(out)} bytes)')
-" "$STAGE_DIR" "$ZIP_PATH"
+        python3 - "$STAGE_DIR" "$ZIP_PATH" <<'PYEOF'
+        import zipfile, os, sys
+        stage = sys.argv[1]
+        out = sys.argv[2]
+        with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as zf:
+            for root, dirs, files in os.walk(stage):
+                for f in files:
+                    full = os.path.join(root, f)
+                    arcname = os.path.relpath(full, stage)
+                    zf.write(full, arcname)
+        print("Created: {} ({} bytes)".format(out, os.path.getsize(out)))
+        PYEOF
 
     - name: Upload noopt.ko artifact
       uses: actions/upload-artifact@v7
