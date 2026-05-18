@@ -1,7 +1,7 @@
 param(
     [string]$KoPath = "kernel\noopt.ko",
     [string]$Output = "out\noopt-ksu.zip",
-    [string]$TargetPath = "/dev/cpuset/AppOpt,/data/system/junge",
+    [string]$TargetPath = "/dev/cpuset/AppOpt,/data/system/junge,/dev/cpuset/scene-daemon,/dev/scene",
     [ValidateSet("0", "1")]
     [string]$HideDirents = "1",
     [ValidateSet("global", "deny")]

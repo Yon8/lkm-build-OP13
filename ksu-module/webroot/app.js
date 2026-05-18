@@ -1,8 +1,19 @@
 const MODDIR = "/data/adb/modules/noopt-demo";
 const CONFIGDIR = "/data/adb/noopt";
+
+function openExternal(url) {
+	try {
+		execShell(`am start -a android.intent.action.VIEW -d ${shellQuote(url)}`);
+	} catch (_) {
+		window.open(url, "_blank");
+	}
+}
+
 const DEFAULT_TARGET_PATHS = [
 	"/dev/cpuset/AppOpt",
 	"/data/system/junge",
+	"/dev/cpuset/scene-daemon",
+	"/dev/scene",
 ];
 const DEFAULT_DENY_PACKAGES = [
 	"com.chunqiunativecheck",

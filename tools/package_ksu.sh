@@ -3,7 +3,7 @@ set -eu
 
 KO_PATH="${1:-kernel/noopt.ko}"
 OUTPUT="${2:-out/noopt-ksu.zip}"
-TARGET_PATHS="${TARGET_PATHS:-${TARGET_PATH:-/dev/cpuset/AppOpt,/data/system/junge}}"
+TARGET_PATHS="${TARGET_PATHS:-${TARGET_PATH:-/dev/cpuset/AppOpt,/data/system/junge,/dev/cpuset/scene-daemon,/dev/scene}}"
 HIDE_DIRENTS="${HIDE_DIRENTS:-1}"
 SCOPE_MODE="${SCOPE_MODE:-deny}"
 DENY_PACKAGES="${DENY_PACKAGES:-com.chunqiunativecheck,com.eltavine.duckdetector,luna.safe.luna}"
